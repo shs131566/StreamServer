@@ -1,0 +1,43 @@
+import argparse
+
+import fastapi
+import uvicorn
+from loguru import logger
+from starlette.middleware.cors import CORSMiddleware
+
+from stream_backend.api.v1.api import api_router
+from stream_backend.config import settings
+from stream_backend.voice_activity_detector import VoiceActivityDetect
+
+app = fastapi.FastAPI(
+    title=settings.PROJECT_NAME,
+    openapi_url=f"{settings.API_V1_STR}/openapi.json",
+)
+app.include_router(api_router, prefix=settings.API_V1_STR)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[str(origin) for origin in settings.BACKEND_CORS_ORIGINS],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+logger.critical(app.__dict__)
+
+
+def main():
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("--host", help="The host to run the server", default="0.0.0.0")
+    parser.add_argument("--port", help="The port to run the server", default=8080)
+    args = parser.parse_args()
+
+    uvicorn.run(
+        app,
+        host=args.host,
+        port=args.port,
+    )
+
+
+if __name__ == "__main__":
+    main()
