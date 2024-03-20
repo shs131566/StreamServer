@@ -1,10 +1,8 @@
 import asyncio
-import io
 
 import numpy as np
-from fastapi import APIRouter, FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from loguru import logger
-from scipy.io.wavfile import write
 
 from stream_backend.triton_client import TritonClient
 from stream_backend.voice_activity_detector import VoiceActivityDetect
@@ -12,19 +10,25 @@ from stream_backend.voice_activity_detector import VoiceActivityDetect
 router = APIRouter()
 
 
-async def transcribe(speech_queue: asyncio.Queue, triton_client: TritonClient):
+async def transcribe(
+    speech_queue: asyncio.Queue, triton_client: TritonClient, websocket: WebSocket
+):
     while True:
         audio = await speech_queue.get()
         combined_audio = audio
-        logger.critical(audio)
+        logger.info(f"Send audio data {len(audio)/16000}s to Whisper")
+
         transcript, repetition = triton_client.transcribe(combined_audio, language="ko")
 
-        # while repetition:
-        #     next_audio_data = await speech_queue.get()
-        #     combined_audio.append(next_audio_data)
-        #     result = await loop.run_in_executor(None, triton_client.transcribe, combined_audio, "ko")
+        while repetition:
+            audio = await speech_queue.get()
+            combined_audio.append(audio)
+            logger.info(f"Send audio data {len(audio)/16000}s to Whisper")
+            transcript, repetition = triton_client.transcribe(
+                combined_audio, language="ko"
+            )
 
-        logger.critical(transcript)
+        await websocket.send_text(f"{len(combined_audio)/16000} {transcript}")
 
 
 async def speech_detect(vad_queue: asyncio.Queue, speech_queue: asyncio.Queue):
@@ -42,7 +46,7 @@ async def speech_detect(vad_queue: asyncio.Queue, speech_queue: asyncio.Queue):
                     audio_buffer.append(previous_frame)
             elif "end" in vad_result and start_time is not None:
                 audio_buffer.append(audio_float32)
-                audio_segment = np.concatenate(audio_buffer, axis=0)
+                audio_segment = np.concatenate(audio_buffer, axis=0, dtype=np.float32)
                 # write(f"{start_time}.wav", 16000, audio_segment)
                 await speech_queue.put(audio_segment)
                 audio_buffer = []
@@ -57,7 +61,6 @@ async def speech_detect(vad_queue: asyncio.Queue, speech_queue: asyncio.Queue):
 async def process_vad(
     audio_bytes_queue: asyncio.Queue,
     vad_queue: asyncio.Queue,
-    websocket: WebSocket,
     vad: VoiceActivityDetect,
 ):
     while True:
@@ -68,12 +71,13 @@ async def process_vad(
                 / np.iinfo(np.int16).max
             )
             vad_result = vad.iterator(audio_float32, return_seconds=True)
-            await websocket.send_text(f"Processed audio data of length {vad_result}")
             await vad_queue.put((audio_float32, vad_result))
         except asyncio.CancelledError:
             break
         except Exception as e:
-            logger.error(e)
+            logger.error(
+                f"Unexpected error occurred on transcribe: {type(e).__name__}: {e}"
+            )
 
 
 @router.websocket("/transcribe")
@@ -89,11 +93,11 @@ async def websocket_endpoint(websocket: WebSocket):
     vad_queue = asyncio.Queue()
     speech_queue = asyncio.Queue()
 
-    vad_task = asyncio.create_task(
-        process_vad(audio_bytes_queue, vad_queue, websocket, vad)
-    )
+    vad_task = asyncio.create_task(process_vad(audio_bytes_queue, vad_queue, vad))
     speech_detect_task = asyncio.create_task(speech_detect(vad_queue, speech_queue))
-    transcribe_task = asyncio.create_task(transcribe(speech_queue, triton_client))
+    transcribe_task = asyncio.create_task(
+        transcribe(speech_queue, triton_client, websocket)
+    )
     try:
         vad = VoiceActivityDetect()
         while True:

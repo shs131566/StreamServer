@@ -22,8 +22,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-logger.critical(app.__dict__)
-
 
 def main():
     parser = argparse.ArgumentParser()

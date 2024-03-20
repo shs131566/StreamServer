@@ -14,7 +14,7 @@ class TritonClient:
             if url is None
             else url
         )
-        self.triton_client = InferenceServerClient(url=self.url, verbose=True)
+        self.triton_client = InferenceServerClient(url=self.url)
 
     def transcribe(
         self,
@@ -24,6 +24,7 @@ class TritonClient:
         inference_type: str = "streaming",
         model_name: str = "whisper",
     ):
+        audio = audio.reshape(1, -1)
         audio_input = InferInput(name="audio", shape=audio.shape, datatype="FP32")
         sr_input = InferInput(name="sample_rate", shape=[1], datatype="INT32")
         language_input = InferInput(name="language", shape=[1], datatype="BYTES")
@@ -34,16 +35,14 @@ class TritonClient:
         language_input.set_data_from_numpy(
             np.array([language.encode("utf-8")], dtype=object)
         )
-        inference_type.set_data_from_numpy(
-            np.array([inference_type_input.encode("utf-8")], dtype=object)
+        inference_type_input.set_data_from_numpy(
+            np.array([inference_type.encode("utf-8")], dtype=object)
         )
-
         result = self.triton_client.infer(
             model_name=model_name,
-            inputs=[audio_input, sr_input, language_input, inference_type],
+            inputs=[audio_input, sr_input, language_input, inference_type_input],
         )
 
-        logger.info(result)
         return (
             json.loads(result.as_numpy("transcription")[0]),
             result.as_numpy("repetition")[0],
