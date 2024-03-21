@@ -68,7 +68,7 @@ async def websocket_endpoint(websocket: WebSocket):
         f"WebSocket accepted from {websocket.client.host}:{websocket.client.port}"
     )
 
-    vad = VoiceActivityDetect(min_silence_duration_ms=100)
+    vad = VoiceActivityDetect(min_silence_duration_ms=50)
     triton_client = TritonClient(url="localhost:8001")
     audio_bytes_queue = asyncio.Queue()
 
