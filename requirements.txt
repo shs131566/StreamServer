@@ -14,3 +14,4 @@ numpy
 tritonclient[grpc]
 pydandic_settings
 torch
+websockets
