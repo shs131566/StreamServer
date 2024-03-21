@@ -20,7 +20,7 @@ class TritonClient:
         self,
         audio: np.ndarray,
         language: str,
-        sample_rate: int = 16000,
+        sample_rate: int = settings.AUDIO_SAMPLING_RATE,
         inference_type: str = "streaming",
         model_name: str = "whisper",
     ):

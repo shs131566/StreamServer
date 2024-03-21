@@ -9,7 +9,7 @@ class VADIterator:
         self,
         model,
         threshold: float = 0.5,
-        sampling_rate: int = 16000,
+        sampling_rate: int = settings.AUDIO_SAMPLING_RATE,
         min_silence_duration_ms: int = 150,
         speech_pad_ms: int = 30,
     ):
@@ -17,9 +17,9 @@ class VADIterator:
         self.threshold = threshold
         self.sampling_rate = sampling_rate
 
-        if sampling_rate not in [8000, 16000]:
+        if sampling_rate is not settings.AUDIO_SAMPLING_RATE:
             raise ValueError(
-                "VADIterator does not support sampling rates other than [8000, 16000]"
+                f"VADIterator does not support sampling rates other than {settings.AUDIO_SAMPLING_RATE}"
             )
         self.min_silence_samples = sampling_rate * min_silence_duration_ms / 1000
         self.speech_pad_samples = sampling_rate * speech_pad_ms / 1000
@@ -82,10 +82,12 @@ class VADIterator:
 
 
 class VoiceActivityDetect:
-    def __init__(self):
+    def __init__(self, min_silence_duration_ms=150):
         self.device = torch.device("cpu")
         self.model = self._init_model(settings.VAD_MODEL_PATH, self.device)
-        self.iterator = VADIterator(self.model)
+        self.iterator = VADIterator(
+            self.model, min_silence_duration_ms=min_silence_duration_ms
+        )
         logger.info("Voice Activity Detection model initialized.")
 
     def _init_model(self, model_path: str, device: str):

@@ -7,7 +7,6 @@ from starlette.middleware.cors import CORSMiddleware
 
 from stream_backend.api.v1.api import api_router
 from stream_backend.config import settings
-from stream_backend.voice_activity_detector import VoiceActivityDetect
 
 app = fastapi.FastAPI(
     title=settings.PROJECT_NAME,

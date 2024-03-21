@@ -10,7 +10,15 @@ class Settings(BaseSettings):
     VAD_MODEL_PATH: str = "assets/silero_vad.jit"
     TRITON_SERVER_URL: str = "localhost"
     TRITON_SERVER_PORT: str = "8001"
-
+    AUDIO_SAMPLING_RATE: int = 16000
+    AUDIO_CHANNELS: int = 1
+    AUDIO_SAMPLE_WIDTH: int = 2
+    TRANSCRIBE_CHUNK_SIZE: int = (
+        AUDIO_SAMPLING_RATE * AUDIO_CHANNELS * AUDIO_SAMPLE_WIDTH * 0.1
+    )
+    OVERLAPPING_TRANSCRIBE_CHUNK_SIZE: int = (
+        AUDIO_SAMPLING_RATE * AUDIO_CHANNELS * AUDIO_SAMPLE_WIDTH * 1.5
+    )
     BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = []
 
     class Config:
