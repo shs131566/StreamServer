@@ -7,3 +7,11 @@ platformdirs==4.2.0
 pre-commit==3.6.2
 PyYAML==6.0.1
 virtualenv==20.25.1
+fastapi
+uvicorn
+loguru
+numpy
+tritonclient[grpc]
+pydandic_settings
+torch
+websockets
