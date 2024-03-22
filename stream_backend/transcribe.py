@@ -11,8 +11,12 @@ from stream_backend.voice_activity_detector import VoiceActivityDetect
 
 
 async def transcribe(
-    speech_queue: asyncio.Queue, triton_client: TritonClient, websocket: WebSocket
+    speech_queue: asyncio.Queue,
+    triton_client: TritonClient,
+    transcript_queue: asyncio.Queue,
+    websocket: WebSocket,
 ):
+    message_id = 0
     while True:
         audio = await speech_queue.get()
         combined_audio = audio
@@ -34,7 +38,9 @@ async def transcribe(
                 combined_audio, language="ko"
             )
 
-        await websocket.send_text(f"{transcript}")
+        await websocket.send_text(f"{message_id:05}: {transcript}")
+        transcript_queue.put({"id": message_id, "transcript": transcript})
+        message_id += 1
 
 
 async def speech_detect(vad_queue: asyncio.Queue, speech_queue: asyncio.Queue):
@@ -115,6 +121,7 @@ async def overlap_transcribe(
                 if "end" in vad_result and is_speaking:
                     if len(combined_audio) > 3:
                         is_speaking = False
+
             elif is_speaking:
                 combined_audio.append(audio_float32)
 

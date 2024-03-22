@@ -1,6 +1,5 @@
 import asyncio
 
-import numpy as np
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from loguru import logger
 
@@ -11,6 +10,7 @@ from stream_backend.transcribe import (
     speech_detect,
     transcribe,
 )
+from stream_backend.translate import translate
 from stream_backend.triton_client import TritonClient
 from stream_backend.voice_activity_detector import VoiceActivityDetect
 
@@ -18,24 +18,41 @@ router = APIRouter()
 
 
 @router.websocket("/transcribe")
-async def websocket_endpoint(websocket: WebSocket):
+async def websocket_endpoint(websocket: WebSocket, translate_flag: bool = False):
     await websocket.accept()
     logger.info(
         f"WebSocket accepted from {websocket.client.host}:{websocket.client.port}"
     )
 
     vad = VoiceActivityDetect()
-    triton_client = TritonClient(url="localhost:8001")
+    triton_client = TritonClient()
     audio_bytes_queue = asyncio.Queue()
     vad_queue = asyncio.Queue()
     speech_queue = asyncio.Queue()
+    transcript_queue = asyncio.Queue()
 
-    vad_task = asyncio.create_task(process_vad(audio_bytes_queue, vad_queue, vad))
-    speech_detect_task = asyncio.create_task(speech_detect(vad_queue, speech_queue))
-    transcribe_task = asyncio.create_task(
-        transcribe(speech_queue, triton_client, websocket)
+    vad_task = asyncio.create_task(
+        process_vad(audio_bytes_queue=audio_bytes_queue, vad_queue=vad_queue, vad=vad)
     )
-
+    speech_detect_task = asyncio.create_task(
+        speech_detect(vad_queue=vad_queue, speech_queue=speech_queue)
+    )
+    transcribe_task = asyncio.create_task(
+        transcribe(
+            speech_queue=speech_queue,
+            triton_client=triton_client,
+            transcript_queue=transcribe_task,
+            websocket=websocket,
+        )
+    )
+    if translate_flag:
+        tranlate_task = asyncio.create_task(
+            translate(
+                transcript_queue=transcript_queue,
+                triton_client=triton_client,
+                websocket=websocket,
+            )
+        )
     accumulated_data = b""
     try:
         vad = VoiceActivityDetect()
@@ -59,6 +76,8 @@ async def websocket_endpoint(websocket: WebSocket):
         vad_task.cancel()
         speech_detect_task.cancel()
         transcribe_task.cancel()
+        if translate_flag:
+            transcribe_task.cancel()
 
 
 @router.websocket("/overlap")
@@ -69,7 +88,7 @@ async def websocket_endpoint(websocket: WebSocket):
     )
 
     vad = VoiceActivityDetect(min_silence_duration_ms=50)
-    triton_client = TritonClient(url="localhost:8001")
+    triton_client = TritonClient()
     audio_bytes_queue = asyncio.Queue()
 
     overlap_transcribe_task = asyncio.create_task(
