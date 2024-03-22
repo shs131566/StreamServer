@@ -4,12 +4,12 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from loguru import logger
 
 from stream_backend.config import settings
-from stream_backend.transcribe import (
+from stream_backend.overlap import (
+    overlap_speech_collect,
     overlap_transcribe,
-    process_vad,
-    speech_detect,
-    transcribe,
+    overlap_vad,
 )
+from stream_backend.transcribe import process_vad, speech_detect, transcribe
 from stream_backend.translate import translate
 from stream_backend.triton_client import TritonClient
 from stream_backend.voice_activity_detector import VoiceActivityDetect
@@ -90,11 +90,27 @@ async def websocket_endpoint(websocket: WebSocket):
     vad = VoiceActivityDetect(min_silence_duration_ms=50)
     triton_client = TritonClient()
     audio_bytes_queue = asyncio.Queue()
+    vad_queue = asyncio.Queue()
+    overlap_speech_queue = asyncio.Queue()
+    speech_queue = asyncio.Queue()
 
-    overlap_transcribe_task = asyncio.create_task(
-        overlap_transcribe(audio_bytes_queue, vad, websocket, triton_client)
+    vad_task = asyncio.create_task(
+        overlap_vad(audio_bytes_queue=audio_bytes_queue, vad_queue=vad_queue, vad=vad)
     )
-
+    speech_collect_task = asyncio.create_task(
+        overlap_speech_collect(
+            vad_queue=vad_queue,
+            overlap_speech_queue=overlap_speech_queue,
+            speech_queue=speech_queue,
+        )
+    )
+    overlap_transcribe_task = asyncio.create_task(
+        overlap_transcribe(
+            overlap_speech_queue=overlap_speech_queue,
+            websocket=websocket,
+            triton_client=triton_client,
+        )
+    )
     accumulated_data = b""
     try:
         vad = VoiceActivityDetect()
@@ -116,4 +132,6 @@ async def websocket_endpoint(websocket: WebSocket):
     except Exception as e:
         logger.error(f"Unexpected error occurred: {type(e).__name__}: {e}")
     finally:
+        vad_task.cancel()
+        speech_collect_task.cancel()
         overlap_transcribe_task.cancel()

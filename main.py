@@ -32,9 +32,7 @@ def main():
     args = parser.parse_args()
 
     uvicorn.run(
-        app,
-        host=args.host,
-        port=args.port,
+        app, host=args.host, port=args.port, ws_ping_interval=25, ws_ping_timeout=100
     )
 
 
