@@ -18,7 +18,12 @@ router = APIRouter()
 
 
 @router.websocket("/transcribe")
-async def websocket_endpoint(websocket: WebSocket, translate_flag: bool = False):
+async def websocket_endpoint(
+    websocket: WebSocket,
+    translate_flag: bool = False,
+    src_lang: str = "ko_KR",
+    tgt_lang: str = "en_XX",
+):
     await websocket.accept()
     logger.info(
         f"WebSocket accepted from {websocket.client.host}:{websocket.client.port}"
@@ -41,7 +46,7 @@ async def websocket_endpoint(websocket: WebSocket, translate_flag: bool = False)
         transcribe(
             speech_queue=speech_queue,
             triton_client=triton_client,
-            transcript_queue=transcribe_task,
+            transcript_queue=transcript_queue,
             websocket=websocket,
         )
     )
@@ -51,6 +56,8 @@ async def websocket_endpoint(websocket: WebSocket, translate_flag: bool = False)
                 transcript_queue=transcript_queue,
                 triton_client=triton_client,
                 websocket=websocket,
+                src_lang=src_lang,
+                tgt_lang=tgt_lang,
             )
         )
     accumulated_data = b""
@@ -77,7 +84,7 @@ async def websocket_endpoint(websocket: WebSocket, translate_flag: bool = False)
         speech_detect_task.cancel()
         transcribe_task.cancel()
         if translate_flag:
-            transcribe_task.cancel()
+            tranlate_task.cancel()
 
 
 @router.websocket("/overlap")
