@@ -2,7 +2,11 @@ import json
 
 import numpy as np
 from loguru import logger
-from tritonclient.grpc import InferenceServerClient, InferInput
+from tritonclient.grpc import (
+    InferenceServerClient,
+    InferenceServerException,
+    InferInput,
+)
 
 from stream_backend.config import settings
 
@@ -23,6 +27,7 @@ class TritonClient:
         sample_rate: int = settings.AUDIO_SAMPLING_RATE,
         inference_type: str = "streaming",
         model_name: str = "whisper",
+        client_timeout: float = 10,
     ):
         audio = audio.reshape(1, -1)
         audio_input = InferInput(name="audio", shape=audio.shape, datatype="FP32")
@@ -38,11 +43,14 @@ class TritonClient:
         inference_type_input.set_data_from_numpy(
             np.array([inference_type.encode("utf-8")], dtype=object)
         )
-        result = self.triton_client.infer(
-            model_name=model_name,
-            inputs=[audio_input, sr_input, language_input, inference_type_input],
-        )
-
+        try:
+            result = self.triton_client.infer(
+                model_name=model_name,
+                inputs=[audio_input, sr_input, language_input, inference_type_input],
+                client_timeout=client_timeout,
+            )
+        except InferenceServerException as e:
+            raise InferenceServerException("Inference server timeout")
         return (
             json.loads(result.as_numpy("transcription")[0]),
             result.as_numpy("repetition")[0],
@@ -55,7 +63,6 @@ class TritonClient:
         tgt_lang: str,
         model_name: str = "nmt",
     ):
-        # TODO: 현재는 triton server config가 query인데, 추후 수정 요망
         transcript_input = InferInput(name="query", shape=[1], datatype="BYTES")
         src_lang_input = InferInput(name="src_lang", shape=[1], datatype="BYTES")
         tgt_lang_input = InferInput(name="tgt_lang", shape=[1], datatype="BYTES")

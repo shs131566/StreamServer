@@ -5,7 +5,7 @@ from fastapi import WebSocket
 from loguru import logger
 
 from stream_backend.config import settings
-from stream_backend.triton_client import TritonClient
+from stream_backend.triton_client import InferenceServerException, TritonClient
 from stream_backend.voice_activity_detector import VoiceActivityDetect
 
 
@@ -14,9 +14,15 @@ async def overlap_transcribe(
 ):
     while True:
         duration, message_id, audio = await overlap_speech_queue.get()
-        transcript, repetition = triton_client.transcribe(audio, language="ko")
+        try:
+            transcript, repetition = triton_client.transcribe(
+                audio, language="ko", client_timeout=10
+            )
+        except InferenceServerException as e:
+            logger.info(e)
+            return
         if not repetition:
-            await websocket.send_text(f"{message_id:05}: {transcript}")
+            await websocket.send_text(f"{message_id:05} {duration}: {transcript}")
 
 
 async def overlap_speech_collect(
@@ -52,6 +58,9 @@ async def overlap_speech_collect(
                     accumulating = False
                     accumulated_audio = []
                     message_id += 1
+                else:
+                    accumulating = False
+                    accumulated_audio = []
 
             elif vad_result is "speak":
                 accumulated_audio.append(audio_float32)
@@ -66,7 +75,7 @@ async def overlap_speech_collect(
                         (accumulated_duration, message_id, speech)
                     )
                     await speech_queue.put((message_id, speech))
-                elif accumulated_duration > 15:
+                elif accumulated_duration > 10:
                     speech = np.concatenate(accumulated_audio, axis=0, dtype=np.float32)
                     await overlap_speech_queue.put(
                         (accumulated_duration, message_id, speech)
