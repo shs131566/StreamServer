@@ -8,7 +8,7 @@ nodeenv==1.8.0
 numpy
 platformdirs==4.2.0
 pre-commit==3.6.2
-pydandic_settings
+pydantic-settings
 PyYAML==6.0.1
 torch
 tritonclient[grpc]

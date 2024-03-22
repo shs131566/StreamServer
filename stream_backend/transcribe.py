@@ -38,8 +38,8 @@ async def transcribe(
                 combined_audio, language="ko"
             )
 
-        await websocket.send_text(f"{message_id:05}: {transcript}")
-        transcript_queue.put({"id": message_id, "transcript": transcript})
+        await websocket.send_text(f"KO:{message_id:05}: {transcript}")
+        await transcript_queue.put((message_id, transcript))
         message_id += 1
 
 

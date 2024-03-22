@@ -47,3 +47,32 @@ class TritonClient:
             json.loads(result.as_numpy("transcription")[0]),
             result.as_numpy("repetition")[0],
         )
+
+    def translate(
+        self,
+        transcript: str,
+        src_lang: str,
+        tgt_lang: str,
+        model_name: str = "nmt",
+    ):
+        # TODO: 현재는 triton server config가 query인데, 추후 수정 요망
+        transcript_input = InferInput(name="query", shape=[1], datatype="BYTES")
+        src_lang_input = InferInput(name="src_lang", shape=[1], datatype="BYTES")
+        tgt_lang_input = InferInput(name="tgt_lang", shape=[1], datatype="BYTES")
+
+        transcript_input.set_data_from_numpy(
+            np.array([transcript.encode("utf-8")], dtype=object)
+        )
+        src_lang_input.set_data_from_numpy(
+            np.array([src_lang.encode("utf-8")], dtype=object)
+        )
+        tgt_lang_input.set_data_from_numpy(
+            np.array([tgt_lang.encode("utf-8")], dtype=object)
+        )
+
+        result = self.triton_client.infer(
+            model_name=model_name,
+            inputs=[transcript_input, src_lang_input, tgt_lang_input],
+        )
+
+        return json.loads(result.as_numpy("translated_txt")[0])[0]["translated"]
