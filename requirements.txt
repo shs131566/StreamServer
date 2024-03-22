@@ -45,14 +45,6 @@ packaging==24.0
 platformdirs==4.2.0
 pooch==1.8.1
 pre-commit==3.6.2
-protobuf==5.26.0
-PyAudio==0.2.14
-pycparser==2.21
-pydantic==2.6.4
-pydantic-settings==2.2.1
-pydantic_core==2.16.3
-python-dotenv==1.0.1
-python-rapidjson==1.16
 PyYAML==6.0.1
 requests==2.31.0
 scikit-learn==1.4.1.post1
