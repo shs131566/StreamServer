@@ -41,7 +41,7 @@ async def transcribe(
             )
 
         message_dict = {
-            "language": "KO",
+            "language": language,
             "message_id": f"{message_id:05}",
             "transcript": transcript,
             "translate": None,

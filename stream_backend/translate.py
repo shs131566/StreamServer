@@ -24,7 +24,7 @@ async def translate(
         )
 
         message_dict = {
-            "language": "EN",
+            "language": tgt_lang,
             "message_id": f"{message_id:05}",
             "transcript": None,
             "translate": translation,

@@ -45,7 +45,7 @@ async def overlap_transcribe(
                     else transcript
                 )
                 message_dict = {
-                    "language": "KO",
+                    "language": language,
                     "message_id": f"{message_id:05}",
                     "transcript": transcript,
                     "translate": None,
@@ -55,7 +55,7 @@ async def overlap_transcribe(
             elif status == OverlapStatus.END_OF_SPEECH:
                 transcript = previous_transcript + " " + transcript
                 message_dict = {
-                    "language": "KO",
+                    "language": language,
                     "message_id": f"{message_id:05}",
                     "transcript": transcript,
                     "translate": None,
@@ -70,7 +70,7 @@ async def overlap_transcribe(
                 previous_transcript = transcript
                 concat_flag = True
                 message_dict = {
-                    "language": "KO",
+                    "language": language,
                     "message_id": f"{message_id:05}",
                     "transcript": transcript,
                     "translate": None,
