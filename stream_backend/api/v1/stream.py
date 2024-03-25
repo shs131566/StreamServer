@@ -88,7 +88,12 @@ async def websocket_endpoint(
 
 
 @router.websocket("/overlap")
-async def websocket_endpoint(websocket: WebSocket):
+async def websocket_endpoint(
+    websocket: WebSocket,
+    translate_flag: bool = False,
+    src_lang: str = "ko_KR",
+    tgt_lang: str = "en_XX",
+):
     await websocket.accept()
     logger.info(
         f"WebSocket accepted from {websocket.client.host}:{websocket.client.port}"
@@ -100,6 +105,7 @@ async def websocket_endpoint(websocket: WebSocket):
     vad_queue = asyncio.Queue()
     overlap_speech_queue = asyncio.Queue()
     speech_queue = asyncio.Queue()
+    transcript_queue = asyncio.Queue()
 
     vad_task = asyncio.create_task(
         overlap_vad(audio_bytes_queue=audio_bytes_queue, vad_queue=vad_queue, vad=vad)
@@ -116,8 +122,19 @@ async def websocket_endpoint(websocket: WebSocket):
             overlap_speech_queue=overlap_speech_queue,
             websocket=websocket,
             triton_client=triton_client,
+            transcript_queue=transcript_queue,
         )
     )
+    if translate_flag:
+        tranlate_task = asyncio.create_task(
+            translate(
+                transcript_queue=transcript_queue,
+                triton_client=triton_client,
+                websocket=websocket,
+                src_lang=src_lang,
+                tgt_lang=tgt_lang,
+            )
+        )
     accumulated_data = b""
     try:
         vad = VoiceActivityDetect()
@@ -142,3 +159,4 @@ async def websocket_endpoint(websocket: WebSocket):
         vad_task.cancel()
         speech_collect_task.cancel()
         overlap_transcribe_task.cancel()
+        tranlate_task.cancel()

@@ -1,3 +1,4 @@
+import json
 import threading
 import time
 import wave
@@ -32,7 +33,11 @@ def on_open(ws):
 
 
 def on_message(ws, message):
-    print("Received message from server: ", message)
+    message = json.loads(message)
+    if message["transcript"]:
+        print(f"{message['message_id']}: {message['transcript']}")
+    elif message["translate"]:
+        print(f"{message['message_id']}: {message['translate']}")
 
 
 def on_error(ws, error):
@@ -43,7 +48,7 @@ def on_close(ws, close_status_code, close_msg):
     print("### closed ###")
 
 
-websocket_url = "ws://localhost:8080/api/v1/stream/overlap"
+websocket_url = "ws://localhost:8080/api/v1/stream/overlap?translate_flag=true"
 audio_file_path = "0320.wav"
 
 ws = websocket.WebSocketApp(
