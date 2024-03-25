@@ -1,4 +1,5 @@
 import asyncio
+import json
 from uuid import uuid4
 
 import numpy as np
@@ -38,8 +39,17 @@ async def transcribe(
                 combined_audio, language="ko"
             )
 
-        await websocket.send_text(f"KO:{message_id:05}: {transcript}")
+        message_dict = {
+            "language": "KO",
+            "message_id": f"{message_id:05}",
+            "transcript": transcript,
+            "translate": None,
+        }
+
+        await websocket.send_text(json.dumps(message_dict))
+
         await transcript_queue.put((message_id, transcript))
+
         message_id += 1
 
 

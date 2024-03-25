@@ -1,4 +1,5 @@
 import asyncio
+import json
 
 import numpy as np
 from fastapi import WebSocket
@@ -10,7 +11,9 @@ from stream_backend.voice_activity_detector import VoiceActivityDetect
 
 
 async def overlap_transcribe(
-    overlap_speech_queue: asyncio, websocket: WebSocket, triton_client: TritonClient
+    overlap_speech_queue: asyncio.Queue,
+    websocket: WebSocket,
+    triton_client: TritonClient,
 ):
     while True:
         duration, message_id, audio = await overlap_speech_queue.get()
@@ -21,8 +24,16 @@ async def overlap_transcribe(
         except InferenceServerException as e:
             logger.info(e)
             return
+
+        message_dict = {
+            "language": "KO",
+            "message_id": f"{message_id:05}",
+            "transcript": transcript,
+            "translate": None,
+        }
+
         if not repetition:
-            await websocket.send_text(f"{message_id:05} {duration}: {transcript}")
+            await websocket.send_text(json.dumps(message_dict))
 
 
 async def overlap_speech_collect(

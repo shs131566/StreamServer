@@ -1,4 +1,5 @@
 import asyncio
+import json
 
 from fastapi import WebSocket
 from loguru import logger
@@ -15,10 +16,17 @@ async def translate(
 ):
     while True:
         message_id, transcript = await transcript_queue.get()
-        translate = triton_client.translate(
+        translation = triton_client.translate(
             transcript,
             src_lang=src_lang,
             tgt_lang=tgt_lang,
         )
 
-        await websocket.send_text(f"EN:{message_id:05}: {translate}")
+        message_dict = {
+            "language": "EN",
+            "message_id": f"{message_id:05}",
+            "transcript": None,
+            "translate": translation,
+        }
+
+        await websocket.send_text(json.dumps(message_dict))
