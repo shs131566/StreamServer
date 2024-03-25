@@ -28,7 +28,9 @@ async def transcribe(
         logger.info(
             f"Send audio data {len(combined_audio)/settings.AUDIO_SAMPLING_RATE}s to Whisper"
         )
-        transcript, repetition = triton_client.transcribe(combined_audio, language="ko")
+        transcript, repetition = triton_client.transcribe(
+            combined_audio, language=language
+        )
 
         while repetition:
             audio = await speech_queue.get()
