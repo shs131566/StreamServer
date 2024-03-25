@@ -1,4 +1,4 @@
-from typing import List
+from typing import ClassVar, Dict, List
 
 from pydantic import AnyHttpUrl
 from pydantic_settings import BaseSettings
@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     OVERLAPPING_TRANSCRIBE_CHUNK_SIZE: int = (
         AUDIO_SAMPLING_RATE * AUDIO_CHANNELS * AUDIO_SAMPLE_WIDTH * 0.1
     )
+    LANGUAGE_DICT: ClassVar[Dict[str, str]] = {"ko": "ko_KR", "en": "en_XX"}
     BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = []
 
     class Config:

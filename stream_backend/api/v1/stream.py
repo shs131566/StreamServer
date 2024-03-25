@@ -21,8 +21,8 @@ router = APIRouter()
 async def websocket_endpoint(
     websocket: WebSocket,
     translate_flag: bool = False,
-    src_lang: str = "ko_KR",
-    tgt_lang: str = "en_XX",
+    src_lang: str = "ko",
+    tgt_lang: str = "en",
 ):
     await websocket.accept()
     logger.info(
@@ -48,6 +48,7 @@ async def websocket_endpoint(
             triton_client=triton_client,
             transcript_queue=transcript_queue,
             websocket=websocket,
+            language=src_lang,
         )
     )
     if translate_flag:
@@ -91,8 +92,8 @@ async def websocket_endpoint(
 async def websocket_endpoint(
     websocket: WebSocket,
     translate_flag: bool = False,
-    src_lang: str = "ko_KR",
-    tgt_lang: str = "en_XX",
+    src_lang: str = "ko",
+    tgt_lang: str = "en",
 ):
     await websocket.accept()
     logger.info(
@@ -123,6 +124,7 @@ async def websocket_endpoint(
             websocket=websocket,
             triton_client=triton_client,
             transcript_queue=transcript_queue,
+            language=src_lang,
         )
     )
     if translate_flag:

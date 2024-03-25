@@ -1,5 +1,6 @@
 import asyncio
 import json
+from enum import IntEnum
 
 import numpy as np
 from fastapi import WebSocket
@@ -10,11 +11,18 @@ from stream_backend.triton_client import InferenceServerException, TritonClient
 from stream_backend.voice_activity_detector import VoiceActivityDetect
 
 
+class OverlapStatus(IntEnum):
+    OVERLAP = 1
+    END_OF_SPEECH = 2
+    SPEAKING = 3
+
+
 async def overlap_transcribe(
     overlap_speech_queue: asyncio.Queue,
     websocket: WebSocket,
     triton_client: TritonClient,
     transcript_queue: asyncio.Queue,
+    language: str = "ko",
 ):
     previous_transcript = ""
     concat_flag = False
@@ -23,14 +31,14 @@ async def overlap_transcribe(
 
         try:
             transcript, repetition = triton_client.transcribe(
-                audio, language="ko", client_timeout=10
+                audio, language=language, client_timeout=10
             )
         except InferenceServerException as e:
             logger.info(e)
-            return
+            continue
 
         if not repetition:
-            if status == "overlap":
+            if status == OverlapStatus.OVERLAP:
                 transcript = (
                     previous_transcript + " " + transcript
                     if concat_flag
@@ -44,7 +52,7 @@ async def overlap_transcribe(
                 }
                 await websocket.send_text(json.dumps(message_dict))
 
-            elif status == "eos":
+            elif status == OverlapStatus.END_OF_SPEECH:
                 transcript = previous_transcript + " " + transcript
                 message_dict = {
                     "language": "KO",
@@ -57,7 +65,7 @@ async def overlap_transcribe(
                 concat_flag = False
                 previous_transcript = ""
 
-            elif status == "speaking":
+            elif status == OverlapStatus.SPEAKING:
                 transcript = previous_transcript + " " + transcript
                 previous_transcript = transcript
                 concat_flag = True
@@ -97,7 +105,9 @@ async def overlap_speech_collect(
 
                 if accumulated_duration > 2.0:
                     speech = np.concatenate(accumulated_audio, axis=0, dtype=np.float32)
-                    await overlap_speech_queue.put(("eos", message_id, speech))
+                    await overlap_speech_queue.put(
+                        (OverlapStatus.END_OF_SPEECH, message_id, speech)
+                    )
                     message_id += 1
                     accumulating = False
                     accumulated_audio = []
@@ -115,11 +125,15 @@ async def overlap_speech_collect(
                 )
                 if accumulated_duration % 2 == 0:
                     speech = np.concatenate(accumulated_audio, axis=0, dtype=np.float32)
-                    await overlap_speech_queue.put(("overlap", message_id, speech))
+                    await overlap_speech_queue.put(
+                        (OverlapStatus.OVERLAP, message_id, speech)
+                    )
                     await speech_queue.put((message_id, speech))
                 elif accumulated_duration > 10:
                     speech = np.concatenate(accumulated_audio, axis=0, dtype=np.float32)
-                    await overlap_speech_queue.put(("speaking", message_id, speech))
+                    await overlap_speech_queue.put(
+                        (OverlapStatus.SPEAKING, message_id, speech)
+                    )
                     await speech_queue.put((message_id, speech))
                     accumulated_audio = []
 

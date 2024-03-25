@@ -16,6 +16,7 @@ async def transcribe(
     triton_client: TritonClient,
     transcript_queue: asyncio.Queue,
     websocket: WebSocket,
+    language: str = "ko",
 ):
     message_id = 0
     while True:
@@ -36,7 +37,7 @@ async def transcribe(
                 f"Send audio data {len(combined_audio)/settings.AUDIO_SAMPLING_RATE}s to Whisper"
             )
             transcript, repetition = triton_client.transcribe(
-                combined_audio, language="ko"
+                combined_audio, language=language
             )
 
         message_dict = {
