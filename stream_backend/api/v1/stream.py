@@ -21,8 +21,8 @@ router = APIRouter()
 async def websocket_endpoint(
     websocket: WebSocket,
     translate_flag: bool = False,
-    src_lang: str = "ko",
-    tgt_lang: str = "en",
+    src_lang: str = None,
+    tgt_lang: str = None,
 ):
     await websocket.accept()
     logger.info(
@@ -63,7 +63,6 @@ async def websocket_endpoint(
         )
     accumulated_data = b""
     try:
-        vad = VoiceActivityDetect()
         while True:
             data = await websocket.receive_bytes()
             accumulated_data += data
@@ -92,15 +91,15 @@ async def websocket_endpoint(
 async def websocket_endpoint(
     websocket: WebSocket,
     translate_flag: bool = False,
-    src_lang: str = "ko",
-    tgt_lang: str = "en",
+    src_lang: str = None,
+    tgt_lang: str = None,
 ):
     await websocket.accept()
     logger.info(
         f"WebSocket accepted from {websocket.client.host}:{websocket.client.port}"
     )
 
-    vad = VoiceActivityDetect(min_silence_duration_ms=50)
+    vad = VoiceActivityDetect(min_silence_duration_ms=100)
     triton_client = TritonClient()
     audio_bytes_queue = asyncio.Queue()
     vad_queue = asyncio.Queue()

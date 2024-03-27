@@ -16,7 +16,16 @@ async def translate(
     tgt_lang: str,
 ):
     while True:
-        message_id, transcript = await transcript_queue.get()
+        message_id, transcript, out_language = await transcript_queue.get()
+
+        if src_lang == None and tgt_lang == None:
+            src_lang = out_language
+            tgt_lang = next(
+                settings.LANGUAGE_DICT[key]
+                for key in settings.LANGUAGE_DICT
+                if key != out_language
+            )
+
         translation = triton_client.translate(
             transcript,
             src_lang=settings.LANGUAGE_DICT[src_lang],

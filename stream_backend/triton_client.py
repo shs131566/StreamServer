@@ -54,6 +54,7 @@ class TritonClient:
         return (
             json.loads(result.as_numpy("transcription")[0]),
             result.as_numpy("repetition")[0],
+            json.loads(result.as_numpy("language")[0]),
         )
 
     def translate(
@@ -83,3 +84,8 @@ class TritonClient:
         )
 
         return json.loads(result.as_numpy("translated_txt")[0])[0]["translated"]
+
+    def check_model_status(self, model_name: str):
+        return self.triton_client.is_model_ready(
+            model_name=model_name, client_timeout=1
+        )

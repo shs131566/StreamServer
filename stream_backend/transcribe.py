@@ -19,6 +19,7 @@ async def transcribe(
     language: str = "ko",
 ):
     message_id = 0
+
     while True:
         audio = await speech_queue.get()
         combined_audio = audio
@@ -28,8 +29,9 @@ async def transcribe(
         logger.info(
             f"Send audio data {len(combined_audio)/settings.AUDIO_SAMPLING_RATE}s to Whisper"
         )
+
         transcript, repetition = triton_client.transcribe(
-            combined_audio, language=language
+            combined_audio, language=language, inference_type="transcribe"
         )
 
         while repetition:
@@ -38,12 +40,12 @@ async def transcribe(
             logger.info(
                 f"Send audio data {len(combined_audio)/settings.AUDIO_SAMPLING_RATE}s to Whisper"
             )
-            transcript, repetition = triton_client.transcribe(
+            transcript, repetition, out_language = triton_client.transcribe(
                 combined_audio, language=language
             )
 
         message_dict = {
-            "language": language,
+            "language": out_language,
             "message_id": f"{message_id:05}",
             "transcript": transcript,
             "translate": None,
@@ -51,7 +53,7 @@ async def transcribe(
 
         await websocket.send_text(json.dumps(message_dict))
 
-        await transcript_queue.put((message_id, transcript))
+        await transcript_queue.put((message_id, out_language, transcript))
 
         message_id += 1
 
