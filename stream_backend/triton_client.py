@@ -26,8 +26,8 @@ class TritonClient:
         language: str,
         sample_rate: int = settings.AUDIO_SAMPLING_RATE,
         inference_type: str = "streaming",
-        model_name: str = "whisper",
-        client_timeout: float = 10,
+        model_name: str = settings.WHISPER_MODEL_NAME,
+        client_timeout: float = 20,
     ):
         audio = audio.reshape(1, -1)
         audio_input = InferInput(name="audio", shape=audio.shape, datatype="FP32")
@@ -37,12 +37,16 @@ class TritonClient:
 
         audio_input.set_data_from_numpy(audio)
         sr_input.set_data_from_numpy(np.array([sample_rate], dtype=np.int32))
+        if language == None:
+            language = "None"
+
         language_input.set_data_from_numpy(
             np.array([language.encode("utf-8")], dtype=object)
         )
         inference_type_input.set_data_from_numpy(
             np.array([inference_type.encode("utf-8")], dtype=object)
         )
+
         try:
             result = self.triton_client.infer(
                 model_name=model_name,
@@ -50,7 +54,7 @@ class TritonClient:
                 client_timeout=client_timeout,
             )
         except InferenceServerException as e:
-            raise InferenceServerException("Inference server timeout")
+            raise e
         return (
             json.loads(result.as_numpy("transcription")[0]),
             result.as_numpy("repetition")[0],
@@ -62,7 +66,7 @@ class TritonClient:
         transcript: str,
         src_lang: str,
         tgt_lang: str,
-        model_name: str = "nmt",
+        model_name: str = settings.TRANSLATE_MODEL_NAME,
     ):
         transcript_input = InferInput(name="query", shape=[1], datatype="BYTES")
         src_lang_input = InferInput(name="src_lang", shape=[1], datatype="BYTES")

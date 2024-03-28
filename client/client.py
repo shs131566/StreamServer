@@ -24,8 +24,9 @@ def on_open(ws):
                 ws.send(data, opcode=websocket.ABNF.OPCODE_BINARY)
                 data = wf.readframes(chunk_size)
 
-                time.sleep(0.1)
+                # time.sleep(0.1)
 
+        time.sleep(300)
         ws.close()
 
     thread = threading.Thread(target=send_audio)
@@ -48,8 +49,8 @@ def on_close(ws, close_status_code, close_msg):
     print("### closed ###")
 
 
-websocket_url = "ws://localhost:8080/api/v1/stream/overlap?translate_flag=true"
-audio_file_path = "0320.wav"
+websocket_url = "ws://localhost:8080/api/v1/stream/transcribe?translate_flag=true"
+audio_file_path = "news.wav"
 
 ws = websocket.WebSocketApp(
     websocket_url,

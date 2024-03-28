@@ -10,6 +10,8 @@ class Settings(BaseSettings):
     VAD_MODEL_PATH: str = "assets/silero_vad.jit"
     TRITON_SERVER_URL: str = "localhost"
     TRITON_SERVER_PORT: str = "8001"
+    WHISPER_MODEL_NAME: str = "whisper"
+    TRANSLATE_MODEL_NAME: str = "nmt"
     AUDIO_SAMPLING_RATE: int = 16000
     AUDIO_CHANNELS: int = 1
     AUDIO_SAMPLE_WIDTH: int = 2
@@ -21,6 +23,7 @@ class Settings(BaseSettings):
     )
     LANGUAGE_DICT: ClassVar[Dict[str, str]] = {"ko": "ko_KR", "en": "en_XX"}
     BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = []
+    LOGGING_LEVEL: str = "INFO"
 
     class Config:
         env_file = ".env"

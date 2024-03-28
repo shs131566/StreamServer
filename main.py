@@ -1,4 +1,5 @@
 import argparse
+import sys
 
 import fastapi
 import uvicorn
@@ -23,6 +24,9 @@ app.add_middleware(
 
 
 def main():
+    logger.remove(0)
+    logger.add(sys.stderr, level=settings.LOGGING_LEVEL)
+
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--host", help="The host to run the server", default="0.0.0.0")

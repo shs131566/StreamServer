@@ -25,8 +25,8 @@ async def websocket_endpoint(
     tgt_lang: str = None,
 ):
     await websocket.accept()
-    logger.info(
-        f"WebSocket accepted from {websocket.client.host}:{websocket.client.port}"
+    logger.success(
+        f"WebSocket accepted from {websocket.client.host}:{websocket.client.port}. Parameters - translate_flag: {translate_flag}, src_lang: '{src_lang}', tgt_lang: '{tgt_lang}'"
     )
 
     vad = VoiceActivityDetect()
@@ -51,6 +51,7 @@ async def websocket_endpoint(
             language=src_lang,
         )
     )
+
     if translate_flag:
         tranlate_task = asyncio.create_task(
             translate(
@@ -96,7 +97,7 @@ async def websocket_endpoint(
 ):
     await websocket.accept()
     logger.info(
-        f"WebSocket accepted from {websocket.client.host}:{websocket.client.port}"
+        f"WebSocket accepted from {websocket.client.host}:{websocket.client.port}. Parameters - translate_flag: {translate_flag}, src_lang: '{src_lang}', tgt_lang: '{tgt_lang}'"
     )
 
     vad = VoiceActivityDetect(min_silence_duration_ms=100)
