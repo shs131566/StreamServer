@@ -24,21 +24,45 @@ def on_open(ws):
                 ws.send(data, opcode=websocket.ABNF.OPCODE_BINARY)
                 data = wf.readframes(chunk_size)
 
-                # time.sleep(0.1)
+                time.sleep(0.1)
 
-        time.sleep(300)
         ws.close()
 
     thread = threading.Thread(target=send_audio)
     thread.start()
 
 
+last_message_id = None
+messages = {}
+
+
 def on_message(ws, message):
+    global last_message_id
+    global messages
+
     message = json.loads(message)
-    if message["transcript"]:
-        print(f"{message['message_id']}: {message['transcript']}")
-    elif message["translate"]:
-        print(f"{message['message_id']}: {message['translate']}")
+
+    if last_message_id != message["message_id"]:
+        last_message_id = message["message_id"]
+
+        if message["transcript"]:
+            messages[message["message_id"]] = {
+                "transcript": message["transcript"],
+                "translate": None,
+            }
+        if message["translate"]:
+            messages[message["message_id"]]["translate"] = message["translate"]
+    else:
+        if message["transcript"]:
+            messages[message["message_id"]]["transcript"] = message["transcript"]
+        if message["translate"]:
+            messages[message["message_id"]]["translate"] = message["translate"]
+
+    print("\033[2J")
+    for message_id in sorted(messages.keys()):
+        message = messages[message_id]
+        print(f"{message_id} : {message['transcript']} -> {message['translate']}")
+        print()
 
 
 def on_error(ws, error):
@@ -49,7 +73,7 @@ def on_close(ws, close_status_code, close_msg):
     print("### closed ###")
 
 
-websocket_url = "ws://localhost:8080/api/v1/stream/transcribe?translate_flag=true"
+websocket_url = "ws://localhost:8080/api/v1/stream/overlap?translate_flag=true"
 audio_file_path = "news.wav"
 
 ws = websocket.WebSocketApp(
