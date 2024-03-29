@@ -21,6 +21,7 @@ async def translate(
             logger.info(
                 f"translate_queue: received message_id {message_id}, spoken language {out_language}, {transcript}."
             )
+            to_translate = tgt_lang
             if src_lang == None and tgt_lang == None:
                 to_translate = next(
                     key for key in settings.LANGUAGE_DICT if key != out_language
