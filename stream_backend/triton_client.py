@@ -52,7 +52,9 @@ class TritonClient:
                 model_name=model_name,
                 inputs=[audio_input, sr_input, language_input, inference_type_input],
                 client_timeout=client_timeout,
+                timeout=int(client_timeout * 100),
             )
+
         except InferenceServerException as e:
             raise e
         return (

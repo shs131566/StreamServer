@@ -29,7 +29,7 @@ async def websocket_endpoint(
         f"WebSocket accepted from {websocket.client.host}:{websocket.client.port}. Parameters - translate_flag: {translate_flag}, src_lang: '{src_lang}', tgt_lang: '{tgt_lang}'"
     )
 
-    vad = VoiceActivityDetect()
+    vad = VoiceActivityDetect(min_silence_duration_ms=10)
     triton_client = TritonClient()
     audio_bytes_queue = asyncio.Queue()
     vad_queue = asyncio.Queue()
@@ -125,6 +125,7 @@ async def websocket_endpoint(
             triton_client=triton_client,
             transcript_queue=transcript_queue,
             language=src_lang,
+            timeout=10,
         )
     )
     if translate_flag:
@@ -161,4 +162,6 @@ async def websocket_endpoint(
         vad_task.cancel()
         speech_collect_task.cancel()
         overlap_transcribe_task.cancel()
-        tranlate_task.cancel()
+
+        if translate_flag:
+            tranlate_task.cancel()

@@ -1,39 +1,99 @@
+import argparse
 import json
 import threading
-import time
 import wave
+from urllib.parse import urlencode
 
 import pyaudio
 import websocket
 
+parser = argparse.ArgumentParser(description="Audio streaming and translation client.")
+parser.add_argument(
+    "-f", "--audio_file_path", type=str, required=True, help="Path to the audio file."
+)
+parser.add_argument(
+    "-r",
+    "--realtime_playback",
+    type=bool,
+    default=False,
+    help="Whether to play the audio in real time.",
+)
+parser.add_argument(
+    "-s", "--server_url", type=str, required=True, help="URL of the server."
+)
+parser.add_argument(
+    "-t",
+    "--translate",
+    type=bool,
+    default=False,
+    help="Whether to translate the audio.",
+)
+parser.add_argument(
+    "-sl",
+    "--source_lang",
+    type=str,
+    default=None,
+    help="Source language for translation.",
+)
+parser.add_argument(
+    "-tl",
+    "--target_lang",
+    type=str,
+    default=None,
+    help="Target language for translation.",
+)
+args = parser.parse_args()
 
-def on_open(ws):
-    def send_audio(*args):
-        with wave.open(audio_file_path, "rb") as wf:
-            framerate = wf.getframerate()
-            nchannels = wf.getnchannels()
-            sampwidth = wf.getsampwidth()
 
-            chunk_size = int(framerate * 0.1)
-            data = wf.readframes(chunk_size)
-            print(
-                f"framerate {framerate}, nchannels {nchannels}, sampwidth {sampwidth}, chunk_size {chunk_size}, {len(data)}"
-            )
-
-            while len(data) > 0:
-                ws.send(data, opcode=websocket.ABNF.OPCODE_BINARY)
-                data = wf.readframes(chunk_size)
-
-                time.sleep(0.1)
-
-        ws.close()
-
-    thread = threading.Thread(target=send_audio)
-    thread.start()
+query_params = {"translate_flag": str(args.translate).lower()}
+if args.source_lang is not None:
+    query_params["src_lang"] = args.source_lang
+if args.target_lang is not None:
+    query_params["tgt_lang"] = args.target_lang
 
 
 last_message_id = None
 messages = {}
+
+
+def send_audio(ws, audio_file_path, realtime_playback):
+    if realtime_playback:
+        p = pyaudio.PyAudio()
+
+    with wave.open(audio_file_path, "rb") as wf:
+        framerate = wf.getframerate()
+        nchannels = wf.getnchannels()
+        sampwidth = wf.getsampwidth()
+
+        if realtime_playback:
+            stream = p.open(
+                format=p.get_format_from_width(sampwidth),
+                channels=nchannels,
+                rate=framerate,
+                output=realtime_playback,
+                input=not realtime_playback,
+            )
+
+        chunk_size = int(framerate * 0.1)
+        data = wf.readframes(chunk_size)
+
+        while len(data) > 0:
+            if realtime_playback:
+                stream.write(data)  # play audio data
+            ws.send(data, opcode=websocket.ABNF.OPCODE_BINARY)  # send audio data
+            data = wf.readframes(chunk_size)
+
+    ws.close()
+    if realtime_playback:
+        stream.stop_stream()
+        stream.close()
+        p.terminate()
+
+
+def on_open(ws):
+    threading.Thread(
+        target=send_audio, args=(ws, args.audio_file_path, args.realtime_playback)
+    ).start()
 
 
 def on_message(ws, message):
@@ -41,7 +101,7 @@ def on_message(ws, message):
     global messages
 
     message = json.loads(message)
-
+    print(message)
     if last_message_id != message["message_id"]:
         last_message_id = message["message_id"]
 
@@ -73,9 +133,8 @@ def on_close(ws, close_status_code, close_msg):
     print("### closed ###")
 
 
-websocket_url = "ws://localhost:8080/api/v1/stream/overlap?translate_flag=true"
-audio_file_path = "news.wav"
-
+websocket_url = f"{args.server_url}/api/v1/stream/overlap?{urlencode(query_params)}"
+print(websocket_url)
 ws = websocket.WebSocketApp(
     websocket_url,
     on_open=on_open,

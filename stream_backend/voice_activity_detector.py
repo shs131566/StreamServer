@@ -82,11 +82,13 @@ class VADIterator:
 
 
 class VoiceActivityDetect:
-    def __init__(self, min_silence_duration_ms=150):
+    def __init__(self, threshold: float = 0.5, min_silence_duration_ms: int = 150):
         self.device = torch.device("cpu")
         self.model = self._init_model(settings.VAD_MODEL_PATH, self.device)
         self.iterator = VADIterator(
-            self.model, min_silence_duration_ms=min_silence_duration_ms
+            self.model,
+            threshold=threshold,
+            min_silence_duration_ms=min_silence_duration_ms,
         )
         logger.info("Voice Activity Detection model initialized.")
 

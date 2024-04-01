@@ -1,5 +1,6 @@
 import asyncio
 import json
+from datetime import datetime
 from uuid import uuid4
 
 import numpy as np
@@ -31,8 +32,12 @@ async def transcribe(
                 f"transcribe_queue: send audio data {len(combined_audio)/settings.AUDIO_SAMPLING_RATE}s to Whisper"
             )
 
+            start_time = datetime.now()
             transcript, repetition, out_language = triton_client.transcribe(
-                combined_audio, language=language, inference_type="transcribe"
+                combined_audio,
+                language=language,
+                inference_type="transcribe",
+                client_timeout=60,
             )
 
             while repetition:
@@ -45,7 +50,9 @@ async def transcribe(
                     combined_audio, language=language, inference_type="transcribe"
                 )
 
-            logger.success(f"transcribe_queue: whisper inference success")
+            logger.success(
+                f"transcribe_queue: whisper inference success {len(combined_audio)/settings.AUDIO_SAMPLING_RATE}s audio completed in {(datetime.now()-start_time).total_seconds()}s"
+            )
             logger.debug(
                 f"transcript: {transcript['text']}, repetiton: {repetition} spoken_language: {out_language}"
             )

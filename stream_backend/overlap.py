@@ -1,5 +1,6 @@
 import asyncio
 import json
+from datetime import datetime
 from enum import IntEnum
 
 import numpy as np
@@ -23,6 +24,7 @@ async def overlap_transcribe(
     triton_client: TritonClient,
     transcript_queue: asyncio.Queue,
     language: str = "ko",
+    timeout: float = 2.0,
 ):
     previous_transcript = ""
     concat_flag = False
@@ -30,16 +32,23 @@ async def overlap_transcribe(
         try:
             status, message_id, audio = await overlap_speech_queue.get()
             logger.info(
-                f"overlap_transcribe_queue: received {status}, {message_id}, and {len(audio)/settings.AUDIO_SAMPLING_RATE}s."
+                f"overlap_transcribe_queue: received status {status}, message_id {message_id}, and {len(audio)/settings.AUDIO_SAMPLING_RATE}s audio."
             )
-            transcript, repetition, out_language = triton_client.transcribe(
-                audio, language=language, client_timeout=10
-            )
-            logger.success(
-                f"overlap_transcribe_queue: {message_id:05} {transcript}, repetition {repetition}, spoken language {out_language}"
-            )
-            if not repetition:
-                if status == OverlapStatus.OVERLAP:
+
+            if status == OverlapStatus.OVERLAP:
+                start_time = datetime.now()
+                transcript, repetition, out_language = triton_client.transcribe(
+                    audio, language=language, client_timeout=timeout
+                )
+
+                logger.success(
+                    f"overlap_transcribe_queue: whisper inference success {len(audio)/settings.AUDIO_SAMPLING_RATE}s audio completed in {(datetime.now()-start_time).total_seconds()}s"
+                )
+                logger.debug(
+                    f"overlap_transcribe_queue: repetition: {repetition}, spoken_language: {out_language}"
+                )
+
+                if not repetition:
                     transcript = (
                         previous_transcript + " " + transcript
                         if concat_flag
@@ -52,10 +61,23 @@ async def overlap_transcribe(
                         "transcript": transcript,
                         "translate": None,
                     }
-                    logger.info(f"overlapping: {message_dict}")
+                    logger.info(f"overlapping")
                     await websocket.send_text(json.dumps(message_dict))
 
-                elif status == OverlapStatus.END_OF_SPEECH:
+            elif status == OverlapStatus.END_OF_SPEECH:
+                start_time = datetime.now()
+                transcript, repetition, out_language = triton_client.transcribe(
+                    audio, language=language, client_timeout=timeout
+                )
+
+                logger.success(
+                    f"overlap_transcribe_queue: whisper inference success {len(audio)/settings.AUDIO_SAMPLING_RATE}s audio completed in {(datetime.now()-start_time).total_seconds()}s"
+                )
+                logger.debug(
+                    f"overlap_transcribe_queue: repetition: {repetition}, spoken_language: {out_language}"
+                )
+
+                if not repetition:
                     transcript = previous_transcript + " " + transcript
 
                     message_dict = {
@@ -64,16 +86,28 @@ async def overlap_transcribe(
                         "transcript": transcript,
                         "translate": None,
                     }
-                    logger.info(f"end of speech: {message_dict}")
+                    logger.info(f"end of speech")
                     await websocket.send_text(json.dumps(message_dict))
-                    logger.info(
+                    logger.debug(
                         f"message_id {message_id}, spoken language {out_language}, transcript {transcript} push to transcript_queue."
                     )
                     await transcript_queue.put((message_id, out_language, transcript))
                     concat_flag = False
                     previous_transcript = ""
 
-                elif status == OverlapStatus.SPEAKING:
+            elif status == OverlapStatus.SPEAKING:
+                start_time = datetime.now()
+                transcript, repetition, out_language = triton_client.transcribe(
+                    audio, language=language, client_timeout=timeout
+                )
+
+                logger.success(
+                    f"overlap_transcribe_queue: whisper inference success {len(audio)/settings.AUDIO_SAMPLING_RATE}s audio completed in {(datetime.now()-start_time).total_seconds()}s"
+                )
+                logger.debug(
+                    f"overlap_transcribe_queue: repetition: {repetition}, spoken_language: {out_language}"
+                )
+                if not repetition:
                     transcript = previous_transcript + " " + transcript
                     previous_transcript = transcript
                     concat_flag = True
@@ -83,12 +117,22 @@ async def overlap_transcribe(
                         "transcript": transcript,
                         "translate": None,
                     }
-                    logger.info(f"speaking: {message_dict}")
+                    logger.info(f"speaking")
                     await websocket.send_text(json.dumps(message_dict))
         except InferenceServerException as e:
             logger.error(
                 f"overlap_transcribe_queue: InferenceServerException occurred: {e}"
             )
+            logger.warning(
+                f"previous transcript: {previous_transcript}, concat_flag: {concat_flag}, message_id: {message_id}, status: {status}"
+            )
+            if status == OverlapStatus.END_OF_SPEECH:
+                await transcript_queue.put((message_id, out_language, transcript))
+                concat_flag = False
+                previous_transcript = ""
+            elif status == OverlapStatus.SPEAKING:
+                previous_transcript = transcript + " "
+                concat_flag = True
             continue
         except asyncio.CancelledError:
             logger.warning("overlap_transcribe_queue: Task was cancelled.")
@@ -110,7 +154,8 @@ async def overlap_speech_collect(
     message_id = 0
     while True:
         audio_float32, vad_result = await vad_queue.get()
-        logger.info(f"overlap_speech_collect_queue: received vad_result {vad_result}")
+        logger.debug(f"overlap_speech_collect_queue: received vad_result {vad_result}")
+
         if vad_result is not None:
             if "start" in vad_result:
                 accumulating = True
@@ -147,7 +192,7 @@ async def overlap_speech_collect(
                     * settings.OVERLAPPING_TRANSCRIBE_CHUNK_SIZE
                     / settings.AUDIO_SAMPLING_RATE
                 )
-                if accumulated_duration % 2 == 0:
+                if accumulated_duration % 3 == 0:
                     speech = np.concatenate(accumulated_audio, axis=0, dtype=np.float32)
                     logger.debug(
                         f"overlap_speech_collect_queue: accumulate speech {accumulated_duration}s push to speech_queue."
@@ -159,7 +204,7 @@ async def overlap_speech_collect(
                         f"overlap_speech_collect_queue: {accumulated_duration}s of speech {message_id} of status {OverlapStatus.OVERLAP} push to overlap_speech_queue."
                     )
                     # await speech_queue.put((message_id, speech))
-                elif accumulated_duration > 10:
+                elif accumulated_duration > 8:
                     speech = np.concatenate(accumulated_audio, axis=0, dtype=np.float32)
                     logger.debug(
                         f"overlap_speech_collect_queue: accumulated speech {accumulated_duration}s push to speech_queue."
