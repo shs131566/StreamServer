@@ -11,7 +11,7 @@ class VADIterator:
         threshold: float = 0.5,
         sampling_rate: int = settings.AUDIO_SAMPLING_RATE,
         min_silence_duration_ms: int = 150,
-        speech_pad_ms: int = 30,
+        speech_pad_ms: int = 10,
     ):
         self.model = model
         self.threshold = threshold

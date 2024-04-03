@@ -183,7 +183,7 @@ async def overlap_speech_collect(
 
                 else:
                     accumulating = False
-                    accumulated_audio = []
+                    accumulated_audio = [audio_float32]
 
             elif vad_result == "speak":
                 accumulated_audio.append(audio_float32)
@@ -191,8 +191,9 @@ async def overlap_speech_collect(
                     len(accumulated_audio)
                     * settings.OVERLAPPING_TRANSCRIBE_CHUNK_SIZE
                     / settings.AUDIO_SAMPLING_RATE
+                    / settings.AUDIO_SAMPLE_WIDTH
                 )
-                if accumulated_duration % 3 == 0:
+                if accumulated_duration % 4 == 0:
                     speech = np.concatenate(accumulated_audio, axis=0, dtype=np.float32)
                     logger.debug(
                         f"overlap_speech_collect_queue: accumulate speech {accumulated_duration}s push to speech_queue."
@@ -204,7 +205,7 @@ async def overlap_speech_collect(
                         f"overlap_speech_collect_queue: {accumulated_duration}s of speech {message_id} of status {OverlapStatus.OVERLAP} push to overlap_speech_queue."
                     )
                     # await speech_queue.put((message_id, speech))
-                elif accumulated_duration > 8:
+                elif accumulated_duration > 10:
                     speech = np.concatenate(accumulated_audio, axis=0, dtype=np.float32)
                     logger.debug(
                         f"overlap_speech_collect_queue: accumulated speech {accumulated_duration}s push to speech_queue."
@@ -216,7 +217,7 @@ async def overlap_speech_collect(
                         f"overlap_speech_collect_queue: {accumulated_duration}s of speech {message_id} of status {OverlapStatus.SPEAKING} push to overlap_speech_queue."
                     )
                     # await speech_queue.put((message_id, speech))
-                    accumulated_audio = []
+                    accumulated_audio = [audio_float32]
                     logger.debug(
                         f"overlap_speech_collect_queue: accumulated speech is too long, reset."
                     )
@@ -229,6 +230,7 @@ async def overlap_speech_collect(
                 len(accumulated_audio)
                 * settings.OVERLAPPING_TRANSCRIBE_CHUNK_SIZE
                 / settings.AUDIO_SAMPLING_RATE
+                / settings.AUDIO_SAMPLE_WIDTH
             )
 
             if accumulated_duration > 2.0:
