@@ -2,13 +2,12 @@ import json
 
 import numpy as np
 from loguru import logger
+from stream_backend.config import settings
 from tritonclient.grpc import (
     InferenceServerClient,
     InferenceServerException,
     InferInput,
 )
-
-from stream_backend.config import settings
 
 
 class TritonClient:

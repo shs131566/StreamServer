@@ -1,0 +1,37 @@
+name: "nmt"
+backend: "python"
+max_batch_size: 0
+
+input [
+  {
+    name: "query"
+    data_type: TYPE_STRING
+    dims: [ -1 ]
+  },
+  {
+    name: "src_lang"
+    data_type: TYPE_STRING
+    dims: [ 1 ]
+  },
+  {
+    name: "tgt_lang"
+    data_type: TYPE_STRING
+    dims: [ 1 ]
+  }
+]
+output [
+  {
+    name: "translated_txt"
+    data_type: TYPE_STRING
+    dims: [ 1 ]
+  }
+]
+
+# If not running in a GPU environment, change KIND_GPU to KIND_CPU in the instance_group.
+# This allows the model to run on CPU instead of GPU.
+instance_group [
+  {
+    # Change "kind: KIND_GPU" to "kind: KIND_CPU" if you are not in a GPU environment.
+    kind: KIND_GPU
+  }
+]

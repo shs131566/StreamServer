@@ -1,0 +1,47 @@
+version: "3.8"
+
+services:
+  inference-server:
+    build:
+      dockerfile: inference/Dockerfile
+      context: .
+    image: inference-server
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - SHM_SIZE=${SHM_SIZE:-1g}
+    ports:
+      - "8000:8000"
+      - "8001:8001"
+      - "8002:8002"
+    volumes:
+      - ./inference/server/models/:/models
+      - ./inference/server/nltk_data:/usr/share/nltk_data
+    shm_size: "10gb"
+    profiles: ["inference", "ci"]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/v2/health/ready || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+  backend-server:
+    build:
+      dockerfile: backend/Dockerfile
+      context: .
+    image: backend-server
+    environment:
+      - TRITON_SERVER_URL=inference-server
+      - TRITON_SERVER_PORT=8001
+      - WHISPER_MODEL_NAME=whisper
+      - TRANSLATE_MODEL_NAME=nmt
+      - AUDIO_SAMPLING_RATE=16000
+      - AUDIO_CHANNELS=1
+      - AUDIO_SAMPLE_WIDTH=2
+      - LOGGING_LEVEL=INFO
+
+    ports:
+      - "8080:8080"
+    profiles: ["backend", "ci"]
+    depends_on:
+      - inference-server

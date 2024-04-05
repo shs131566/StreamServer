@@ -45,6 +45,8 @@ packaging==24.0
 platformdirs==4.2.0
 pooch==1.8.1
 pre-commit==3.6.2
+protobuf==5.26.0
+pydantic_settings==2.2.1
 PyYAML==6.0.1
 requests==2.31.0
 scikit-learn==1.4.1.post1

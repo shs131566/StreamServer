@@ -1,6 +1,5 @@
 import torch
 from loguru import logger
-
 from stream_backend.config import settings
 
 

@@ -1,5 +1,4 @@
 from fastapi import APIRouter
-
 from stream_backend.api.v1 import stream
 
 api_router = APIRouter()

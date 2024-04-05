@@ -5,7 +5,6 @@ import fastapi
 import uvicorn
 from loguru import logger
 from starlette.middleware.cors import CORSMiddleware
-
 from stream_backend.api.v1.api import api_router
 from stream_backend.config import settings
 
@@ -36,7 +35,11 @@ def main():
     args = parser.parse_args()
 
     uvicorn.run(
-        app, host=args.host, port=args.port, ws_ping_interval=25, ws_ping_timeout=100
+        app,
+        host=args.host,
+        port=args.port,
+        ws_ping_interval=25,
+        ws_ping_timeout=100,
     )
 
 

@@ -1,2 +1,6 @@
 __pycache__/
 *.wav
+nltk_data/
+*.bin
+*.pt
+ctrans_fp16/

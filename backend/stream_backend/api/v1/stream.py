@@ -2,7 +2,6 @@ import asyncio
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from loguru import logger
-
 from stream_backend.config import settings
 from stream_backend.overlap import (
     overlap_speech_collect,

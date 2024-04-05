@@ -3,7 +3,6 @@ import json
 
 from fastapi import WebSocket
 from loguru import logger
-
 from stream_backend.config import settings
 from stream_backend.triton_client import InferenceServerException, TritonClient
 

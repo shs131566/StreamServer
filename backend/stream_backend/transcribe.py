@@ -6,7 +6,6 @@ from uuid import uuid4
 import numpy as np
 from fastapi import WebSocket
 from loguru import logger
-
 from stream_backend.config import settings
 from stream_backend.triton_client import InferenceServerException, TritonClient
 from stream_backend.voice_activity_detector import VoiceActivityDetect

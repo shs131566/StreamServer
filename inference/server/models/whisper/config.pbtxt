@@ -1,0 +1,53 @@
+name: "whisper"
+backend: "python"
+max_batch_size: 0
+
+input [
+  {
+    name: "audio"
+    data_type: TYPE_FP32
+    dims: [1, -1]
+  },
+  {
+    name: "sample_rate"
+    data_type: TYPE_INT32
+    dims: [1]
+  },
+  {
+    name: "language"
+    data_type: TYPE_STRING
+    dims: [1]
+  },
+  {
+    name: "type"
+    data_type: TYPE_STRING
+    dims: [1]
+  }
+]
+output [
+  {
+    name: "transcription"
+    data_type: TYPE_STRING
+    dims: [1]
+  },
+  {
+    name: "repetition"
+    data_type: TYPE_BOOL
+    dims: [1]
+  },
+  {
+    name: "language"
+    data_type: TYPE_STRING
+    dims: [1]
+  }
+]
+
+# If not running in a GPU environment, change KIND_GPU to KIND_CPU in the instance_group.
+# This allows the model to run on CPU instead of GPU.
+instance_group [
+  {
+    # Change "kind: KIND_GPU" to "kind: KIND_CPU" if you are not in a GPU environment.
+    count: 1
+    kind: KIND_GPU
+  }
+]

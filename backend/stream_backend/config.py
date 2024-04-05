@@ -9,7 +9,7 @@ class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
     VAD_MODEL_PATH: str = "assets/silero_vad.jit"
     TRITON_SERVER_URL: str = "localhost"
-    TRITON_SERVER_PORT: str = "8001"
+    TRITON_SERVER_PORT: int = 8001
     WHISPER_MODEL_NAME: str = "whisper"
     TRANSLATE_MODEL_NAME: str = "nmt"
     AUDIO_SAMPLING_RATE: int = 16000
