@@ -17,8 +17,9 @@ async def transcribe(
     transcript_queue: asyncio.Queue,
     websocket: WebSocket,
     language: str = None,
+    room_id: str = None,
+    device_id: str = None,
 ):
-    message_id = 0
 
     while True:
         try:
@@ -61,8 +62,8 @@ async def transcribe(
                 continue
 
             message_dict = {
-                "language": out_language,
-                "message_id": f"{message_id:05}",
+                "room_id": room_id,
+                "device_id": device_id,
                 "transcript": transcript["text"],
                 "translate": None,
             }
@@ -118,7 +119,7 @@ async def speech_detect(vad_queue: asyncio.Queue, speech_queue: asyncio.Queue):
                         f"speech_detect_queue: pushing audio segment of length {len(audio_segment)/settings.AUDIO_SAMPLING_RATE} to speech queue."
                     )
                     await speech_queue.put(audio_segment)
-                    audio_buffer = []
+                    audio_buffer.clear()
                     start_time = None
                     logger.debug(
                         "speech_detect_queue: detected end of speech, appended audio segment to speech queue and reset variables."

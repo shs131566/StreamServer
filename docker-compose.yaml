@@ -20,7 +20,8 @@ services:
     shm_size: "10gb"
     profiles: ["inference", "ci"]
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8000/v2/health/ready || exit 1"]
+      test:
+        ["CMD-SHELL", "curl -f http://localhost:8000/v2/health/ready || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -43,5 +44,3 @@ services:
     ports:
       - "8080:8080"
     profiles: ["backend", "ci"]
-    depends_on:
-      - inference-server

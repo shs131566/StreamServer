@@ -19,13 +19,14 @@ router = APIRouter()
 @router.websocket("/transcribe")
 async def websocket_endpoint(
     websocket: WebSocket,
-    translate_flag: bool = False,
+    room_id: str,
+    device_id: str,
     src_lang: str = None,
     tgt_lang: str = None,
 ):
     await websocket.accept()
     logger.success(
-        f"WebSocket accepted from {websocket.client.host}:{websocket.client.port}. Parameters - translate_flag: {translate_flag}, src_lang: '{src_lang}', tgt_lang: '{tgt_lang}'"
+        f"WebSocket accepted from {websocket.client.host}:{websocket.client.port}. Parameters - room_id: '{room_id}', device_id: '{device_id}': src_lang: '{src_lang}', tgt_lang: '{tgt_lang}'"
     )
 
     vad = VoiceActivityDetect(min_silence_duration_ms=10)
@@ -48,19 +49,21 @@ async def websocket_endpoint(
             transcript_queue=transcript_queue,
             websocket=websocket,
             language=src_lang,
+            room_id=room_id,
+            device_id=device_id,
         )
     )
-
-    if translate_flag:
-        tranlate_task = asyncio.create_task(
-            translate(
-                transcript_queue=transcript_queue,
-                triton_client=triton_client,
-                websocket=websocket,
-                src_lang=src_lang,
-                tgt_lang=tgt_lang,
-            )
+    tranlate_task = asyncio.create_task(
+        translate(
+            transcript_queue=transcript_queue,
+            triton_client=triton_client,
+            websocket=websocket,
+            src_lang=src_lang,
+            tgt_lang=tgt_lang,
+            room_id=room_id,
+            device_id=device_id,
         )
+    )
     accumulated_data = b""
     try:
         while True:
@@ -83,8 +86,7 @@ async def websocket_endpoint(
         vad_task.cancel()
         speech_detect_task.cancel()
         transcribe_task.cancel()
-        if translate_flag:
-            tranlate_task.cancel()
+        tranlate_task.cancel()
 
 
 @router.websocket("/overlap")

@@ -9,6 +9,7 @@ from stream_backend.api.v1.api import api_router
 from stream_backend.config import settings
 
 app = fastapi.FastAPI(
+    root_path="/workb",
     title=settings.PROJECT_NAME,
     openapi_url=f"{settings.API_V1_STR}/openapi.json",
 )

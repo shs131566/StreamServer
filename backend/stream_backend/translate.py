@@ -13,6 +13,8 @@ async def translate(
     websocket: WebSocket,
     src_lang: str = None,
     tgt_lang: str = None,
+    room_id: str = None,
+    device_id: str = None,
 ):
     while True:
         try:
@@ -36,8 +38,8 @@ async def translate(
                 f"translate_queue: {message_id:05} {transcript} \t translate to \t {translation}"
             )
             message_dict = {
-                "language": tgt_lang,
-                "message_id": f"{message_id:05}",
+                "room_id": room_id,
+                "device_id": device_id,
                 "transcript": None,
                 "translate": translation,
             }
